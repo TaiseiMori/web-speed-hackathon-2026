@@ -7,6 +7,7 @@ import { Button } from "@web-speed-hackathon-2026/client/src/components/foundati
 import { Modal } from "@web-speed-hackathon-2026/client/src/components/modal/Modal";
 import { useFetch } from "@web-speed-hackathon-2026/client/src/hooks/use_fetch";
 import { fetchBinary } from "@web-speed-hackathon-2026/client/src/utils/fetchers";
+import { Buffer } from "buffer";
 
 interface Props {
   src: string;
@@ -64,6 +65,7 @@ export const CoveredImage = ({ src }: Props) => {
             "w-full h-auto": containerRatio <= imageRatio,
           },
         )}
+        loading="lazy"
         src={blobUrl}
       />
 
