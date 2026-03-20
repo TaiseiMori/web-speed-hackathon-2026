@@ -24,7 +24,8 @@ imageRouter.post("/images", async (req, res) => {
   }
 
   const type = await fileTypeFromBuffer(req.body);
-  if (type === undefined || type.ext !== INPUT_EXTENSION) {
+  const SUPPORTED_EXTENSIONS = ["jpg", "jpeg", "png", "gif", "webp"];
+  if (type === undefined || !SUPPORTED_EXTENSIONS.includes(type.ext)) {
     throw new httpErrors.BadRequest("Invalid file type");
   }
 
