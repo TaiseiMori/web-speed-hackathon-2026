@@ -58,7 +58,7 @@ const config = {
     ],
     static: [PUBLIC_PATH, UPLOAD_PATH],
   },
-  devtool: "inline-source-map",
+  devtool: false,
   entry: Object.fromEntries(
     pageEntries.map(({ name, file }) => [
       name,
