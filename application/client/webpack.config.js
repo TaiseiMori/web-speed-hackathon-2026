@@ -171,10 +171,10 @@ const config = {
     splitChunks: {
       chunks: "all",
     },
-    concatenateModules: false,
-    usedExports: false,
-    providedExports: false,
-    sideEffects: false,
+    concatenateModules: true,
+    usedExports: true,
+    providedExports: true,
+    sideEffects: true,
   },
   cache: { type: "filesystem" },
   ignoreWarnings: [
