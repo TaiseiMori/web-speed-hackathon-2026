@@ -137,7 +137,7 @@ const config = {
         });
       },
     },
-    new BundleAnalyzerPlugin(),
+    ...(process.env.ANALYZE ? [new BundleAnalyzerPlugin()] : []),
   ],
   resolve: {
     extensions: [".tsx", ".ts", ".mjs", ".cjs", ".jsx", ".js"],
