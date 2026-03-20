@@ -6,6 +6,7 @@
   "author": "CyberAgent, Inc.",
   "scripts": {
     "build": "NODE_ENV=development webpack",
+    "watch": "NODE_ENV=development webpack --watch",
     "typecheck": "tsc"
   },
   "dependencies": {

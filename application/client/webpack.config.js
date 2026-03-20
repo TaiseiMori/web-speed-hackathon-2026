@@ -94,6 +94,18 @@ const config = {
       inject: false,
       template: path.resolve(SRC_PATH, "./index.html"),
     }),
+    {
+      apply(compiler) {
+        compiler.hooks.watchRun.tap("RebuildLogger", () => {
+          console.log(`\n[${new Date().toLocaleTimeString()}] 変更検知 → 再ビルド開始...`);
+        });
+        compiler.hooks.done.tap("RebuildLogger", (stats) => {
+          const ms = stats.endTime - stats.startTime;
+          const status = stats.hasErrors() ? "エラーあり" : "成功";
+          console.log(`[${new Date().toLocaleTimeString()}] 再ビルド完了 (${ms}ms) [${status}]`);
+        });
+      },
+    },
   ],
   resolve: {
     extensions: [".tsx", ".ts", ".mjs", ".cjs", ".jsx", ".js"],
