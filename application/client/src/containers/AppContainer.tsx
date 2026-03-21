@@ -1,5 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useId, useState } from "react";
-import { HelmetProvider } from "react-helmet";
+import { Helmet, HelmetProvider } from "react-helmet";
 import { Route, Routes, useLocation, useNavigate } from "react-router";
 
 import { AppPage } from "@web-speed-hackathon-2026/client/src/components/application/AppPage";
@@ -78,6 +78,26 @@ export const AppContainer = () => {
 
   const authModalId = useId();
   const newPostModalId = useId();
+
+  if (activeUser === undefined) {
+    return (
+      <HelmetProvider>
+        <Helmet>
+          <title>読込中 - CaX</title>
+        </Helmet>
+        <AppPage
+          activeUser={undefined}
+          authModalId={authModalId}
+          newPostModalId={newPostModalId}
+          onLogout={handleLogout}
+        >
+          <p className="text-cax-text-muted px-4 py-6 text-center">読み込み中...</p>
+        </AppPage>
+        <AuthModalContainer id={authModalId} onUpdateActiveUser={setActiveUser} />
+        <NewPostModalContainer id={newPostModalId} />
+      </HelmetProvider>
+    );
+  }
 
   return (
     <HelmetProvider>
