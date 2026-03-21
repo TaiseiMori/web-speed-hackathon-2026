@@ -1,23 +1,56 @@
+import path from "path";
+import Bluebird from "bluebird";
+import kuromoji, { type IpadicFeatures, type Tokenizer } from "kuromoji";
+import analyze from "negaposi-analyzer-ja";
 import { Router } from "express";
 import { Op } from "sequelize";
 
 import { Post } from "@web-speed-hackathon-2026/server/src/models";
+import { PUBLIC_PATH } from "@web-speed-hackathon-2026/server/src/paths";
 import { parseSearchQuery } from "@web-speed-hackathon-2026/server/src/utils/parse_search_query.js";
 
 export const searchRouter = Router();
+
+let tokenizerCache: Tokenizer<IpadicFeatures> | null = null;
+
+async function getTokenizer(): Promise<Tokenizer<IpadicFeatures>> {
+  if (tokenizerCache) return tokenizerCache;
+  const builder = Bluebird.promisifyAll(
+    kuromoji.builder({ dicPath: path.join(PUBLIC_PATH, "dicts") }),
+  );
+  tokenizerCache = await builder.buildAsync();
+  return tokenizerCache;
+}
+
+async function checkNegative(text: string): Promise<boolean> {
+  try {
+    const tokenizer = await getTokenizer();
+    const tokens = tokenizer.tokenize(text);
+    const score = analyze(tokens);
+    return score < -0.1;
+  } catch {
+    return false;
+  }
+}
 
 searchRouter.get("/search", async (req, res) => {
   const query = req.query["q"];
 
   if (typeof query !== "string" || query.trim() === "") {
-    return res.status(200).type("application/json").send([]);
+    return res.status(200).type("application/json").send({ isNegative: false, posts: [] });
   }
 
   const { keywords, sinceDate, untilDate } = parseSearchQuery(query);
 
   // キーワードも日付フィルターもない場合は空配列を返す
   if (!keywords && !sinceDate && !untilDate) {
-    return res.status(200).type("application/json").send([]);
+    return res.status(200).type("application/json").send({ isNegative: false, posts: [] });
+  }
+
+  // ネガポジ判定を行い、ネガティブなら検索せずに返却
+  const isNegative = keywords ? await checkNegative(keywords) : false;
+  if (isNegative) {
+    return res.status(200).type("application/json").send({ isNegative: true, posts: [] });
   }
 
   const searchTerm = keywords ? `%${keywords}%` : null;
@@ -51,6 +84,7 @@ searchRouter.get("/search", async (req, res) => {
   let postsByUser: typeof postsByText = [];
   if (searchTerm) {
     postsByUser = await Post.findAll({
+      subQuery: false,
       include: [
         {
           association: "user",
@@ -88,5 +122,5 @@ searchRouter.get("/search", async (req, res) => {
 
   const result = mergedPosts.slice(offset || 0, (offset || 0) + (limit || mergedPosts.length));
 
-  return res.status(200).type("application/json").send(result);
+  return res.status(200).type("application/json").send({ isNegative: false, posts: result });
 });
