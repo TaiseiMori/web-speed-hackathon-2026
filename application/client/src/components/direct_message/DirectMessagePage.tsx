@@ -2,6 +2,8 @@ import classNames from "classnames";
 import {
   ChangeEvent,
   useCallback,
+  useLayoutEffect,
+  useMemo,
   useId,
   useRef,
   useState,
@@ -25,6 +27,9 @@ interface Props {
   onSubmit: (params: DirectMessageFormData) => Promise<void>;
 }
 
+const MESSAGE_PAGE_SIZE = 30;
+const LOAD_MORE_SCROLL_THRESHOLD_PX = 48;
+
 export const DirectMessagePage = ({
   conversationError,
   conversation,
@@ -35,14 +40,31 @@ export const DirectMessagePage = ({
   onSubmit,
 }: Props) => {
   const formRef = useRef<HTMLFormElement>(null);
+  const prevReachedTopRef = useRef(false);
+  const isPrependingRef = useRef(false);
+  const previousBodyHeightRef = useRef<number | null>(null);
   const textAreaId = useId();
 
   const peer =
     conversation.initiator.id !== activeUser.id ? conversation.initiator : conversation.member;
 
   const [text, setText] = useState("");
+  const [renderCount, setRenderCount] = useState(MESSAGE_PAGE_SIZE);
   const textAreaRows = Math.min((text || "").split("\n").length, 5);
   const isInvalid = text.trim().length === 0;
+  const sortedMessages = useMemo(() => {
+    return [...conversation.messages].sort((a, b) => {
+      const createdAtDiff = Date.parse(a.createdAt) - Date.parse(b.createdAt);
+      if (createdAtDiff !== 0) {
+        return createdAtDiff;
+      }
+      return a.id.localeCompare(b.id);
+    });
+  }, [conversation.messages]);
+  const renderedMessages = useMemo(() => {
+    return sortedMessages.slice(Math.max(0, sortedMessages.length - renderCount));
+  }, [sortedMessages, renderCount]);
+  const hasOlderMessages = renderCount < sortedMessages.length;
 
   const handleChange = useCallback(
     (event: ChangeEvent<HTMLTextAreaElement>) => {
@@ -71,6 +93,54 @@ export const DirectMessagePage = ({
     },
     [onSubmit, text],
   );
+
+  const handleLoadOlderMessages = useCallback(() => {
+    if (!hasOlderMessages) {
+      return;
+    }
+    isPrependingRef.current = true;
+    previousBodyHeightRef.current = document.body.offsetHeight;
+    setRenderCount((current) => Math.min(current + MESSAGE_PAGE_SIZE, sortedMessages.length));
+  }, [hasOlderMessages, sortedMessages.length]);
+
+  useEffect(() => {
+    const handler = () => {
+      const hasReachedTop = Math.ceil(window.scrollY) <= LOAD_MORE_SCROLL_THRESHOLD_PX;
+
+      if (hasReachedTop && !prevReachedTopRef.current && hasOlderMessages) {
+        handleLoadOlderMessages();
+      }
+
+      prevReachedTopRef.current = hasReachedTop;
+    };
+
+    prevReachedTopRef.current = false;
+    handler();
+
+    document.addEventListener("resize", handler, { passive: false });
+    document.addEventListener("scroll", handler, { passive: false });
+    return () => {
+      document.removeEventListener("resize", handler);
+      document.removeEventListener("scroll", handler);
+    };
+  }, [hasOlderMessages, handleLoadOlderMessages]);
+
+  useEffect(() => {
+    setRenderCount(MESSAGE_PAGE_SIZE);
+  }, [conversation.id]);
+
+  useLayoutEffect(() => {
+    if (!isPrependingRef.current) {
+      return;
+    }
+    const previousBodyHeight = previousBodyHeightRef.current;
+    if (previousBodyHeight != null) {
+      const addedHeight = document.body.offsetHeight - previousBodyHeight;
+      window.scrollTo(0, window.scrollY + addedHeight);
+    }
+    isPrependingRef.current = false;
+    previousBodyHeightRef.current = null;
+  }, [renderedMessages.length]);
 
   useEffect(() => {
     const id = window.requestAnimationFrame(() => {
@@ -109,18 +179,19 @@ export const DirectMessagePage = ({
       </header>
 
       <div className="bg-cax-surface-subtle flex-1 space-y-4 overflow-y-auto px-4 pt-4 pb-8">
-        {conversation.messages.length === 0 && (
+        {sortedMessages.length === 0 && (
           <p className="text-cax-text-muted text-center text-sm">
             まだメッセージはありません。最初のメッセージを送信してみましょう。
           </p>
         )}
 
         <ul className="grid gap-3" data-testid="dm-message-list">
-          {conversation.messages.map((message) => {
+          {renderedMessages.map((message) => {
             const isActiveUserSend = message.sender.id === activeUser.id;
 
             return (
               <li
+                key={message.id}
                 className={classNames(
                   "flex flex-col w-full",
                   isActiveUserSend ? "items-end" : "items-start",
