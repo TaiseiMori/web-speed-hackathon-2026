@@ -14,9 +14,9 @@ interface Props {
 }
 
 export const DirectMessageListPage = ({ activeUser, newDmModalId }: Props) => {
-  const [conversations, setConversations] =
-    useState<Array<Models.DirectMessageConversation> | null>(null);
+  const [conversations, setConversations] = useState<Array<Models.DirectMessageConversation>>([]);
   const [error, setError] = useState<Error | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
 
   const loadConversations = useCallback(async () => {
     if (activeUser == null) {
@@ -24,11 +24,13 @@ export const DirectMessageListPage = ({ activeUser, newDmModalId }: Props) => {
     }
 
     try {
+      setLoading(true);
       const conversations = await fetchJSON<Array<Models.DirectMessageConversation>>("/api/v1/dm");
       setConversations(conversations);
       setError(null);
     } catch (error) {
-      setConversations(null);
+      setLoading(false);
+      setConversations([]);
       setError(error as Error);
     }
   }, [activeUser]);
@@ -40,10 +42,6 @@ export const DirectMessageListPage = ({ activeUser, newDmModalId }: Props) => {
   useWs("/api/v1/dm/unread", () => {
     void loadConversations();
   });
-
-  if (conversations == null) {
-    return null;
-  }
 
   return (
     <section>
@@ -62,7 +60,7 @@ export const DirectMessageListPage = ({ activeUser, newDmModalId }: Props) => {
 
       {error != null ? (
         <p className="text-cax-danger px-4 py-6 text-center text-sm">DMの取得に失敗しました</p>
-      ) : conversations.length === 0 ? (
+      ) : conversations.length === 0 && !loading ? (
         <p className="text-cax-text-muted px-4 py-6 text-center">
           まだDMで会話した相手がいません。
         </p>
