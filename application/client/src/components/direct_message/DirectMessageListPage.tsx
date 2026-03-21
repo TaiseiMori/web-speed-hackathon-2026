@@ -1,5 +1,6 @@
-import moment from "moment";
 import { useCallback, useEffect, useState } from "react";
+
+import { formatFromNow } from "@web-speed-hackathon-2026/client/src/utils/format_date";
 
 import { Button } from "@web-speed-hackathon-2026/client/src/components/foundation/Button";
 import { FontAwesomeIcon } from "@web-speed-hackathon-2026/client/src/components/foundation/FontAwesomeIcon";
@@ -103,7 +104,7 @@ export const DirectMessageListPage = ({ activeUser, newDmModalId }: Props) => {
                             className="text-cax-text-subtle text-xs"
                             dateTime={lastMessage.createdAt}
                           >
-                            {moment(lastMessage.createdAt).locale("ja").fromNow()}
+                            {formatFromNow(lastMessage.createdAt)}
                           </time>
                         )}
                       </div>

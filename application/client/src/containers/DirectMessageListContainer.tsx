@@ -13,6 +13,10 @@ interface Props {
 export const DirectMessageListContainer = ({ activeUser, authModalId }: Props) => {
   const newDmModalId = useId();
 
+  if (activeUser === undefined) {
+    return null;
+  }
+
   if (activeUser === null) {
     return (
       <DirectMessageGate
