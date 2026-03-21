@@ -131,7 +131,16 @@ export const NewPostModalPage = ({ id, hasError, isLoading, onResetError, onSubm
         />
       </div>
 
-      <ModalSubmitButton disabled={isLoading || params.text === ""} loading={isLoading}>
+      <ModalSubmitButton
+        disabled={
+          isLoading ||
+          (params.images.length === 0 &&
+            params.movie === undefined &&
+            params.sound === undefined &&
+            params.text === "")
+        }
+        loading={isLoading}
+      >
         {isLoading ? "送信中" : "投稿する"}
       </ModalSubmitButton>
 
