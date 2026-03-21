@@ -17,23 +17,34 @@ export const soundRouter = Router();
 function convertToMp3(
   inputPath: string,
   outputPath: string,
-  metadata: { artist: string; title: string },
+  metadata: { artist: string; title: string } | undefined,
 ): Promise<void> {
+  const outputOptions = ["-vn"];
+  if (metadata != null) {
+    outputOptions.push("-metadata", `artist=${metadata.artist}`, "-metadata", `title=${metadata.title}`);
+  }
+
   return new Promise((resolve, reject) => {
     Ffmpeg(inputPath)
-      .outputOptions([
-        "-vn",
-        "-metadata",
-        `artist=${metadata.artist}`,
-        "-metadata",
-        `title=${metadata.title}`,
-      ])
+      .outputOptions(outputOptions)
       .audioCodec("libmp3lame")
       .output(outputPath)
       .on("end", () => resolve())
       .on("error", reject)
       .run();
   });
+}
+
+function sanitizeMetadataText(text: string | undefined): string | undefined {
+  if (text == null) {
+    return undefined;
+  }
+
+  const sanitized = text
+    .replace(/[\u0000-\u001f\u007f]/g, "")
+    .trim();
+
+  return sanitized === "" ? undefined : sanitized;
 }
 
 soundRouter.post("/sounds", async (req, res) => {
@@ -49,14 +60,19 @@ soundRouter.post("/sounds", async (req, res) => {
   const tmpInput = path.join(tmpDir, "input");
   const outputPath = path.resolve(UPLOAD_PATH, `./sounds/${soundId}.${OUTPUT_EXTENSION}`);
 
-  const { artist = "Unknown Artist", title = "Unknown Title" } = await extractMetadataFromSound(
-    req.body,
-  );
+  const extractedMetadata = await extractMetadataFromSound(req.body);
+  const artist = sanitizeMetadataText(extractedMetadata.artist) ?? "Unknown Artist";
+  const title = sanitizeMetadataText(extractedMetadata.title) ?? "Unknown Title";
 
   try {
     await fs.writeFile(tmpInput, req.body);
     await fs.mkdir(path.resolve(UPLOAD_PATH, "sounds"), { recursive: true });
-    await convertToMp3(tmpInput, outputPath, { artist, title });
+    try {
+      await convertToMp3(tmpInput, outputPath, { artist, title });
+    } catch {
+      // メタデータ起因で ffmpeg が失敗するケースに備えて再試行する
+      await convertToMp3(tmpInput, outputPath, undefined);
+    }
   } finally {
     await fs.rm(tmpDir, { recursive: true, force: true });
   }
