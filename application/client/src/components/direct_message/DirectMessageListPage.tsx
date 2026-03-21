@@ -9,7 +9,7 @@ import { fetchJSON } from "@web-speed-hackathon-2026/client/src/utils/fetchers";
 import { getProfileImagePath } from "@web-speed-hackathon-2026/client/src/utils/get_path";
 
 interface Props {
-  activeUser: Models.User;
+  activeUser: Models.User | undefined;
   newDmModalId: string;
 }
 
@@ -29,9 +29,11 @@ export const DirectMessageListPage = ({ activeUser, newDmModalId }: Props) => {
       setConversations(conversations);
       setError(null);
     } catch (error) {
-      setLoading(false);
       setConversations([]);
+      setLoading(false);
       setError(error as Error);
+    } finally {
+      setLoading(false);
     }
   }, [activeUser]);
 
@@ -60,7 +62,9 @@ export const DirectMessageListPage = ({ activeUser, newDmModalId }: Props) => {
 
       {error != null ? (
         <p className="text-cax-danger px-4 py-6 text-center text-sm">DMの取得に失敗しました</p>
-      ) : conversations.length === 0 && !loading ? (
+      ) : loading || activeUser === undefined ? (
+        <p className="text-cax-text-muted px-4 py-6 text-center">読み込み中...</p>
+      ) : conversations.length === 0 ? (
         <p className="text-cax-text-muted px-4 py-6 text-center">
           まだDMで会話した相手がいません。
         </p>
