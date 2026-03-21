@@ -9,14 +9,14 @@ import { fetchJSON } from "@web-speed-hackathon-2026/client/src/utils/fetchers";
 import { getProfileImagePath } from "@web-speed-hackathon-2026/client/src/utils/get_path";
 
 interface Props {
-  activeUser: Models.User;
+  activeUser: Models.User | undefined;
   newDmModalId: string;
 }
 
 export const DirectMessageListPage = ({ activeUser, newDmModalId }: Props) => {
-  const [conversations, setConversations] =
-    useState<Array<Models.DirectMessageConversation> | null>(null);
+  const [conversations, setConversations] = useState<Array<Models.DirectMessageConversation>>([]);
   const [error, setError] = useState<Error | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
 
   const loadConversations = useCallback(async () => {
     if (activeUser == null) {
@@ -24,12 +24,16 @@ export const DirectMessageListPage = ({ activeUser, newDmModalId }: Props) => {
     }
 
     try {
+      setLoading(true);
       const conversations = await fetchJSON<Array<Models.DirectMessageConversation>>("/api/v1/dm");
       setConversations(conversations);
       setError(null);
     } catch (error) {
-      setConversations(null);
+      setConversations([]);
+      setLoading(false);
       setError(error as Error);
+    } finally {
+      setLoading(false);
     }
   }, [activeUser]);
 
@@ -40,10 +44,6 @@ export const DirectMessageListPage = ({ activeUser, newDmModalId }: Props) => {
   useWs("/api/v1/dm/unread", () => {
     void loadConversations();
   });
-
-  if (conversations == null) {
-    return null;
-  }
 
   return (
     <section>
@@ -62,6 +62,8 @@ export const DirectMessageListPage = ({ activeUser, newDmModalId }: Props) => {
 
       {error != null ? (
         <p className="text-cax-danger px-4 py-6 text-center text-sm">DMの取得に失敗しました</p>
+      ) : loading || activeUser === undefined ? (
+        <p className="text-cax-text-muted px-4 py-6 text-center">読み込み中...</p>
       ) : conversations.length === 0 ? (
         <p className="text-cax-text-muted px-4 py-6 text-center">
           まだDMで会話した相手がいません。
