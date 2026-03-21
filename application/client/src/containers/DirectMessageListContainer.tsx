@@ -6,7 +6,7 @@ import { DirectMessageListPage } from "@web-speed-hackathon-2026/client/src/comp
 import { NewDirectMessageModalContainer } from "@web-speed-hackathon-2026/client/src/containers/NewDirectMessageModalContainer";
 
 interface Props {
-  activeUser: Models.User | null;
+  activeUser: Models.User | null | undefined;
   authModalId: string;
 }
 
